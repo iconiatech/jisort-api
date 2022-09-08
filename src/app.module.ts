@@ -5,7 +5,6 @@ import { AppService } from './app.service';
 
 import { AppController } from './app.controller';
 
-import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { MenusModule } from './menus/menus.module';
 import { ProductsModule } from './products/products.module';
@@ -13,7 +12,6 @@ import { CompaniesModule } from './companies/companies.module';
 
 @Module({
   imports: [
-    AuthModule,
     UsersModule,
     MenusModule,
     ProductsModule,
