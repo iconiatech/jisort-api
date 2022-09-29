@@ -7,6 +7,7 @@ import { AppController } from './app.controller';
 
 import { UsersModule } from './users/users.module';
 import { MenusModule } from './menus/menus.module';
+import { WebhookModule } from './webhook/webhook.module';
 import { ProductsModule } from './products/products.module';
 import { CompaniesModule } from './companies/companies.module';
 
@@ -14,6 +15,7 @@ import { CompaniesModule } from './companies/companies.module';
   imports: [
     UsersModule,
     MenusModule,
+    WebhookModule,
     ProductsModule,
     CompaniesModule,
     MongooseModule.forRoot('mongodb://localhost:27000/jisort'),
