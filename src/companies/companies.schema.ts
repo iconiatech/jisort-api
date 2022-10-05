@@ -6,6 +6,9 @@ export type CompanyDocument = Company & Document;
 @Schema()
 export class Company {
   @Prop({ required: true })
+  id: string;
+
+  @Prop({ required: true })
   compName: string;
 
   @Prop({ required: true })
@@ -25,6 +28,9 @@ export class Company {
 
   @Prop({ required: true })
   compType: string;
+
+  @Prop()
+  compBearerToken: string;
 
   @Prop()
   isActive: boolean;
