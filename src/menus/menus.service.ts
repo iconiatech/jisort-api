@@ -1,4 +1,4 @@
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import {
   Injectable,
@@ -26,6 +26,7 @@ export class MenusService {
   async create(createMenuDto: CreateMenuDto): Promise<Menu> {
     await this.companiesService.findOne(createMenuDto.compId);
     const createdMenu = new this.menuModel(createMenuDto);
+    createdMenu.id = new Types.ObjectId().toString();
     return createdMenu.save();
   }
 
@@ -36,10 +37,10 @@ export class MenusService {
    * @returns the menu item with the provided id or raises a not found error
    */
   async findOne(id: string): Promise<Menu> {
-    let menu;
+    let menu: Menu;
 
     try {
-      menu = await this.menuModel.findById(id);
+      menu = await this.menuModel.findOne({ id });
     } catch (error) {
       throw new NotFoundException('Could not find the menu item');
     }
@@ -47,11 +48,12 @@ export class MenusService {
     if (!menu) {
       throw new NotFoundException('Could not find the menu item');
     }
+
     return menu;
   }
 
   async findMany(ids: string[]): Promise<Menu[]> {
-    return this.menuModel.find().where('_id').in(ids).exec();
+    return this.menuModel.find().where('id').in(ids).exec();
   }
 
   async getSingle(id: string) {
@@ -82,6 +84,17 @@ export class MenusService {
       const parentMenu = await this.findOne(attrs.menuParentId);
       parentMenu.subMenus.push(id);
       await new this.menuModel(parentMenu).save();
+    }
+
+    if (
+      'menuProductCategories' in attrs &&
+      attrs.menuProductCategories.length
+    ) {
+      const allCategories = [
+        ...attrs.menuProductCategories,
+        ...menuItem.menuProductCategories,
+      ];
+      attrs.menuProductCategories = [...new Set(allCategories)];
     }
 
     Object.assign(menuItem, attrs);
