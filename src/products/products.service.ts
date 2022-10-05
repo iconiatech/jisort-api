@@ -88,7 +88,7 @@ export class ProductsService {
    */
   async getMenuProducts(menuId: string): Promise<Product[]> {
     const menuItem = await this.menusService.findOne(menuId);
-    const categories = menuItem.menuCategories;
+    const categories = menuItem.menuProductCategories;
 
     return this.getCategoryProducts(categories);
   }
