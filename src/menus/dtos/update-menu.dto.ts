@@ -1,4 +1,11 @@
-import { IsString, IsNumber, IsOptional, IsBoolean } from 'class-validator';
+import {
+  IsArray,
+  IsString,
+  IsNumber,
+  IsBoolean,
+  IsOptional,
+  ArrayMinSize,
+} from 'class-validator';
 
 export class UpdateMenuDto {
   @IsString()
@@ -12,6 +19,10 @@ export class UpdateMenuDto {
   @IsString()
   @IsOptional()
   menuActionType: string;
+
+  @IsBoolean()
+  @IsOptional()
+  menuIsTopMost: boolean;
 
   @IsString()
   @IsOptional()
@@ -29,9 +40,11 @@ export class UpdateMenuDto {
   @IsOptional()
   menuParentId: string;
 
-  @IsString()
   @IsOptional()
-  menuCategories: string[];
+  @IsArray()
+  @IsString({ each: true })
+  @ArrayMinSize(1)
+  menuProductCategories: string[];
 
   @IsBoolean()
   @IsOptional()
