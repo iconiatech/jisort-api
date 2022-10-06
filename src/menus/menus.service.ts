@@ -112,4 +112,19 @@ export class MenusService {
 
     return this.menuModel.find().where('compId').in([compId]).exec();
   }
+
+  /**
+   * Return the top most menu items for a particular company
+   * @param compId the id of the company
+   * @returns menu items for the company with the id
+   */
+  async getTopMostMenus(compId: string): Promise<Menu[]> {
+    await this.companiesService.findOne(compId);
+
+    return this.menuModel
+      .find({ menuIsTopMost: true })
+      .where('compId')
+      .in([compId])
+      .exec();
+  }
 }
