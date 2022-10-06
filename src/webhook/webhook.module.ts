@@ -1,9 +1,26 @@
 import { Module } from '@nestjs/common';
-import { WebhookController } from './webhook.controller';
+import { MongooseModule } from '@nestjs/mongoose';
+
+import { UserStep, UserStepSchema } from './user-steps.schema';
+
 import { WebhookService } from './webhook.service';
+import { WebhookController } from './webhook.controller';
+
+import { MenusModule } from '../menus/menus.module';
+import { CompaniesModule } from '../companies/companies.module';
 
 @Module({
-  controllers: [WebhookController],
   providers: [WebhookService],
+  controllers: [WebhookController],
+  imports: [
+    MongooseModule.forFeature([
+      {
+        name: UserStep.name,
+        schema: UserStepSchema,
+      },
+    ]),
+    MenusModule,
+    CompaniesModule,
+  ],
 })
 export class WebhookModule {}
