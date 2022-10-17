@@ -7,6 +7,7 @@ import { WebhookService } from './webhook.service';
 import { WebhookController } from './webhook.controller';
 
 import { MenusModule } from '../menus/menus.module';
+import { ProductsModule } from '../products/products.module';
 import { CompaniesModule } from '../companies/companies.module';
 
 @Module({
@@ -20,6 +21,7 @@ import { CompaniesModule } from '../companies/companies.module';
       },
     ]),
     MenusModule,
+    ProductsModule,
     CompaniesModule,
   ],
 })
