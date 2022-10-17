@@ -1,4 +1,4 @@
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { Injectable, NotFoundException } from '@nestjs/common';
 
@@ -36,6 +36,7 @@ export class ProductsService {
     // });
 
     const createdProduct = new this.productsModel(productDto);
+    createdProduct.id = new Types.ObjectId().toString();
     return createdProduct.save();
   }
 
@@ -50,7 +51,7 @@ export class ProductsService {
     let product: Product;
 
     try {
-      product = await this.productsModel.findById(id);
+      product = await this.productsModel.findOne({ id });
     } catch (error) {
       throw new NotFoundException('Could not find the product');
     }
