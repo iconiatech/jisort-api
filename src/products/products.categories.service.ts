@@ -1,4 +1,4 @@
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import {
   Injectable,
@@ -30,6 +30,7 @@ export class ProductsCategoryService {
   async create(categoryDto: CreateCategoryDto): Promise<ProductCategory> {
     await this.companiesService.findOne(categoryDto.compId);
     const createdCategory = new this.prodCatModel(categoryDto);
+    createdCategory.id = new Types.ObjectId().toString();
     return createdCategory.save();
   }
 
@@ -44,7 +45,7 @@ export class ProductsCategoryService {
     let category: ProductCategory;
 
     try {
-      category = await this.prodCatModel.findById(id);
+      category = await this.prodCatModel.findOne({ id });
     } catch (error) {
       throw new NotFoundException('Could not find the category');
     }
