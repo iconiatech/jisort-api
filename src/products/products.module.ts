@@ -13,6 +13,7 @@ import {
 } from './products.categories.schema';
 
 @Module({
+  exports: [ProductsService],
   controllers: [ProductsController],
   providers: [ProductsService, ProductsCategoryService],
   imports: [
