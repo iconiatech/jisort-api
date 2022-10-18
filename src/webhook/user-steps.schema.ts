@@ -6,10 +6,13 @@ export type UserStepDocument = UserStep & Document;
 @Schema()
 export class UserStep {
   @Prop({ required: true })
-  phoneNumberId: string;
+  menuId: string;
 
   @Prop({ required: true })
-  menuId: string;
+  phoneNumberId: string;
+
+  @Prop()
+  lastAccessAction: string;
 
   @Prop({ required: true })
   lastAccessTime: string;
