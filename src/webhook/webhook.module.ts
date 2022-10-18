@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 
+import { UserCart, UserCartSchema } from './user-cart.schema';
 import { UserStep, UserStepSchema } from './user-steps.schema';
 
 import { WebhookService } from './webhook.service';
@@ -18,6 +19,10 @@ import { CompaniesModule } from '../companies/companies.module';
       {
         name: UserStep.name,
         schema: UserStepSchema,
+      },
+      {
+        name: UserCart.name,
+        schema: UserCartSchema,
       },
     ]),
     MenusModule,
