@@ -2,6 +2,9 @@ import { IsString } from 'class-validator';
 
 export class CreateUserStepDto {
   @IsString()
+  compId: string;
+
+  @IsString()
   menuId: string;
 
   @IsString()
@@ -9,4 +12,7 @@ export class CreateUserStepDto {
 
   @IsString()
   lastAccessTime: string;
+
+  @IsString()
+  lastAccessAction: string;
 }
