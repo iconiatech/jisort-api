@@ -68,4 +68,50 @@ export class Whatsapp {
 
     return respData;
   }
+
+  async sendButtonResponse({
+    messageResponse,
+    phoneNumberFrom,
+  }: {
+    phoneNumberFrom: string;
+    messageResponse: string;
+  }): Promise<string> {
+    const fbUrl = `https://graph.facebook.com/v12.0/${this.phoneNumberId}/messages`;
+
+    const config = {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${this.bearerToken}`,
+      },
+    };
+
+    const payload = {
+      messaging_product: 'whatsapp',
+      recipient_type: 'individual',
+      to: `${phoneNumberFrom}`,
+      type: 'interactive',
+      interactive: {
+        type: 'button',
+        body: {
+          text: `${messageResponse}`,
+        },
+        action: {
+          buttons: [
+            {
+              type: 'reply',
+              reply: {
+                id: 'Back',
+                title: 'Back',
+              },
+            },
+          ],
+        },
+      },
+    };
+
+    const response = await axios.post<string>(fbUrl, payload, config);
+    const respData = response.data;
+
+    return respData;
+  }
 }
