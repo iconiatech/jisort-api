@@ -20,6 +20,9 @@ export class Product {
   @Prop({ required: true })
   prodStockLeft: number;
 
+  @Prop({ required: true })
+  prodMenuNumber: number;
+
   @Prop()
   prodCategories: string[];
 
@@ -28,6 +31,12 @@ export class Product {
 
   @Prop({ required: true })
   inactiveMessage: string;
+
+  @Prop()
+  createdAt: string;
+
+  @Prop()
+  updatedAt: string;
 }
 
 export const ProductSchema = SchemaFactory.createForClass(Product);
