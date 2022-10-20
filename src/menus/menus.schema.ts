@@ -49,6 +49,12 @@ export class Menu {
 
   @Prop({ required: true })
   inactiveMessage: string;
+
+  @Prop()
+  createdAt: string;
+
+  @Prop()
+  updatedAt: string;
 }
 
 export const MenuSchema = SchemaFactory.createForClass(Menu);

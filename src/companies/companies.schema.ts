@@ -43,6 +43,12 @@ export class Company {
 
   @Prop()
   compClosingTime: string;
+
+  @Prop()
+  createdAt: string;
+
+  @Prop()
+  updatedAt: string;
 }
 
 export const CompanySchema = SchemaFactory.createForClass(Company);
