@@ -1,4 +1,5 @@
-import { sortMenus } from '../../utils';
+import { sortMenus, sortProducts } from '../../utils';
+
 import { Menu } from '../../menus/menus.schema';
 import { Product } from '../../products/products.schema';
 import { Company } from '../../companies/companies.schema';
@@ -55,9 +56,9 @@ export const formatProductsResponse = async (
 ): Promise<string> => {
   let newStr = ``;
 
-  // const sortedMenus = sortMenus(menus.filter((m) => m.isActive));
+  const sortedProducts = sortProducts(products.filter((p) => p.isActive));
 
-  products.forEach((prod, i) => {
+  sortedProducts.forEach((prod, i) => {
     const item = `\n*${i + 1}*. ${prod.prodName}`;
     newStr += item;
   });
@@ -73,14 +74,14 @@ export const formatProductsResponse = async (
 export const formatDetailedProductResponse = async (
   product: Product,
 ): Promise<string> => {
-  // const newStr = ``;
+  const opt1 = '*1.* Enter *1* to add to cart',
+    opt2 = '*2.* Enter *2* to go back',
+    opt3 = '*3.* Back to main menu';
 
-  // const sortedMenus = sortMenus(menus.filter((m) => m.isActive));
+  const prodOptions = `${opt1}\n${opt2}\n${opt3}`;
 
   const messageResponse = `
-        *Main Menu*:\n(NB: Please enter the appropriate number in the *Main Menu* then click send to continue)
-        *1.* Enter the number *Quantity* you want to purchase 
-        `;
+        *Product Info*:\n(NB: You have selected *${product.prodName}*)\n${prodOptions}`;
 
   return messageResponse;
 };
