@@ -2,6 +2,7 @@ import { Model } from 'mongoose';
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 
+import { MenuActionType } from '../utils/globalTypes';
 import { Whatsapp, checkIsValidNumber, sortMenus } from '../utils';
 import {
   checkIsActiveComp,
@@ -52,9 +53,22 @@ export class WebhookService {
       phoneNumberId: updateStepDto.phoneNumberId,
     });
 
+    console.log('Here');
+
     Object.assign(step, updateStepDto);
 
     return new this.userStepModel(step).save();
+  }
+
+  async deleteUserStep({
+    compId,
+    phoneNumberId,
+  }: {
+    phoneNumberId: string;
+    compId: string;
+  }) {
+    await this.userStepModel.deleteOne({ compId, phoneNumberId }).exec();
+    return;
   }
 
   /**
@@ -100,10 +114,10 @@ export class WebhookService {
   }) {
     const messageResponse = await this.formatTopMenus(compId);
 
-    // const response = await whatsapp.sendMessageResponse({
-    //   phoneNumberFrom,
-    //   messageResponse,
-    // });
+    await whatsapp.sendMessageResponse({
+      phoneNumberFrom,
+      messageResponse,
+    });
 
     this.saveUserStep({
       compId,
@@ -136,13 +150,12 @@ export class WebhookService {
     // Check error message
     if (!checkIsValidNumber(messageBody)) {
       const errMsg = `Hello *${senderName}* in order for us to help, please reply with the appropriate options above.`;
-      // const response = await whatsapp.sendMessageResponse({
-      //   phoneNumberFrom,
-      //   messageResponse: errMsg,
-      // });
-      console.log('Error message');
+      await whatsapp.sendMessageResponse({
+        phoneNumberFrom,
+        messageResponse: errMsg,
+      });
+      console.log(errMsg);
       return errMsg;
-      // return response;
     }
 
     const topMenus = await this.menusService.getTopMostMenus(compId);
@@ -170,26 +183,32 @@ export class WebhookService {
       console.log(messageResponse);
       console.log('Selected menus has sub menus');
       return messageResponse;
-      // return response;
     }
     //selected menus has no sub menus
     else {
-      const messageResponse = selectedMenu.menuTitle;
-      // const response = await whatsapp.sendMessageResponse({
-      //   phoneNumberFrom,
-      //   messageResponse,
-      // });
-      this.updateUserStep({
-        compId,
-        phoneNumberId,
-        lastAccessAction: '',
-        menuId: selectedMenu.id,
-        lastAccessTime: new Date().toUTCString(),
-      });
-      console.log(selectedMenu.menuTitle);
-      console.log('Selected menus action');
-      return messageResponse;
-      // return response;
+      if (selectedMenu.menuActionType === MenuActionType.ANSWER) {
+        const messageResponse = selectedMenu.menuAnswer;
+
+        await whatsapp.sendMessageResponse({
+          phoneNumberFrom,
+          messageResponse,
+        });
+
+        const endMenu = `
+        ----------------\nType anything to continue
+        `;
+
+        await whatsapp.sendMessageResponse({
+          phoneNumberFrom,
+          messageResponse: endMenu,
+        });
+
+        await this.deleteUserStep({ compId, phoneNumberId });
+
+        return messageResponse;
+      } else if (selectedMenu.menuActionType === MenuActionType.PRODUCTS) {
+        console.log('Work on products');
+      }
     }
   }
 
@@ -417,8 +436,6 @@ export class WebhookService {
       phoneNumberId,
       compId: company.id,
     });
-
-    console.log(userLastStep);
 
     if (!userLastStep) {
       return await this.sendFirstStep({
