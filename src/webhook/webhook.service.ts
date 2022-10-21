@@ -3,7 +3,12 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 
 import { MenuActionType } from '../utils/globalTypes';
-import { Whatsapp, checkIsValidNumber, sortMenus } from '../utils';
+import {
+  Whatsapp,
+  sortMenus,
+  sortProducts,
+  checkIsValidNumber,
+} from '../utils';
 import {
   checkIsActiveComp,
   formatMenusResponse,
@@ -12,6 +17,7 @@ import {
 } from './utils/helpers';
 
 import { MenuTypes } from '../menus/types';
+import { Menu } from '../menus/menus.schema';
 
 import { UserCart, UserCartDocument } from './user-cart.schema';
 import { UserStep, UserStepDocument } from './user-steps.schema';
@@ -53,8 +59,6 @@ export class WebhookService {
       phoneNumberId: updateStepDto.phoneNumberId,
     });
 
-    console.log('Here');
-
     Object.assign(step, updateStepDto);
 
     return new this.userStepModel(step).save();
@@ -71,11 +75,6 @@ export class WebhookService {
     return;
   }
 
-  /**
-   * Method to get the last step by a user
-   * @param phoneNumberId the unique phone number id
-   * @returns the last step if it exists, null if not
-   */
   async getUserLastStep({
     compId,
     phoneNumberId,
@@ -94,6 +93,12 @@ export class WebhookService {
     return step;
   }
 
+  /**
+   * =============================
+   * Reusable functions start here
+   * =============================
+   */
+
   async formatTopMenus(compId: string): Promise<string> {
     const topMenus = await this.menusService.getTopMostMenus(compId);
     const messageResponse = await formatMenusResponse(topMenus);
@@ -101,7 +106,59 @@ export class WebhookService {
     return messageResponse;
   }
 
-  async sendFirstStep({
+  async sendMenuAction({
+    whatsapp,
+    selectedMenu,
+    phoneNumberFrom,
+  }: {
+    whatsapp: Whatsapp;
+    selectedMenu: Menu;
+    phoneNumberFrom: string;
+  }) {
+    const messageResponse = selectedMenu.menuAnswer;
+
+    await whatsapp.sendMessageResponse({
+      phoneNumberFrom,
+      messageResponse,
+    });
+
+    return;
+  }
+
+  async sendMenuProducts({
+    whatsapp,
+    selectedMenu,
+    phoneNumberFrom,
+  }: {
+    whatsapp: Whatsapp;
+    selectedMenu: Menu;
+    phoneNumberFrom: string;
+  }) {
+    // No products to display
+    if (!selectedMenu.menuProductCategories.length) {
+      const response = 'Sorry there are no products to display currently.';
+      await whatsapp.sendMessageResponse({
+        phoneNumberFrom,
+        messageResponse: response,
+      });
+      return;
+    }
+
+    const menuProducts = await this.productsService.getMenuProducts(
+      selectedMenu.id,
+    );
+
+    const messageResponse = await formatProductsResponse(menuProducts);
+
+    await whatsapp.sendMessageResponse({
+      phoneNumberFrom,
+      messageResponse,
+    });
+
+    return;
+  }
+
+  async sendTopMenus({
     compId,
     whatsapp,
     phoneNumberId,
@@ -127,9 +184,7 @@ export class WebhookService {
       lastAccessTime: new Date().toUTCString(),
     });
 
-    console.log('First step for user');
-
-    return messageResponse;
+    return;
   }
 
   async sendSecondStep({
@@ -165,50 +220,64 @@ export class WebhookService {
       (m) => m.menuNumber === parseInt(messageBody),
     )[0];
 
-    // Selected menus has sub meus
-    if (selectedMenu.subMenus.length) {
-      const subMenus = await this.menusService.findMany(selectedMenu.subMenus);
-      const messageResponse = await formatMenusResponse(subMenus);
-      // const response = await whatsapp.sendMessageResponse({
-      //   phoneNumberFrom,
-      //   messageResponse,
-      // });
-      this.updateUserStep({
+    // Handle sub menus
+    if (selectedMenu.menuActionType === MenuActionType.SUBMENUS) {
+      // Selected menus has sub meus
+      if (selectedMenu.subMenus.length) {
+        const subMenus = await this.menusService.findMany(
+          selectedMenu.subMenus,
+        );
+        const messageResponse = await formatMenusResponse(subMenus);
+        // const response = await whatsapp.sendMessageResponse({
+        //   phoneNumberFrom,
+        //   messageResponse,
+        // });
+        this.updateUserStep({
+          compId,
+          phoneNumberId,
+          lastAccessAction: '',
+          menuId: selectedMenu.id,
+          lastAccessTime: new Date().toUTCString(),
+        });
+        console.log(messageResponse);
+        console.log('Selected menus has sub menus');
+        return messageResponse;
+      }
+    }
+    // Handle menu answer
+    if (selectedMenu.menuActionType === MenuActionType.ANSWER) {
+      await this.sendMenuAction({ selectedMenu, phoneNumberFrom, whatsapp });
+      await this.deleteUserStep({ compId, phoneNumberId });
+      await this.sendTopMenus({
+        compId,
+        whatsapp,
+        phoneNumberId,
+        phoneNumberFrom,
+      });
+      return;
+    }
+    // Handle menu products
+    if (selectedMenu.menuActionType === MenuActionType.PRODUCTS) {
+      await this.sendMenuProducts({
+        whatsapp,
+        selectedMenu,
+        phoneNumberFrom,
+      });
+
+      await this.updateUserStep({
         compId,
         phoneNumberId,
-        lastAccessAction: '',
         menuId: selectedMenu.id,
+        lastAccessAction: 'viewProduct',
         lastAccessTime: new Date().toUTCString(),
       });
-      console.log(messageResponse);
-      console.log('Selected menus has sub menus');
-      return messageResponse;
+
+      return;
     }
-    //selected menus has no sub menus
-    else {
-      if (selectedMenu.menuActionType === MenuActionType.ANSWER) {
-        const messageResponse = selectedMenu.menuAnswer;
-
-        await whatsapp.sendMessageResponse({
-          phoneNumberFrom,
-          messageResponse,
-        });
-
-        const endMenu = `
-        ----------------\nType anything to continue
-        `;
-
-        await whatsapp.sendMessageResponse({
-          phoneNumberFrom,
-          messageResponse: endMenu,
-        });
-
-        await this.deleteUserStep({ compId, phoneNumberId });
-
-        return messageResponse;
-      } else if (selectedMenu.menuActionType === MenuActionType.PRODUCTS) {
-        console.log('Work on products');
-      }
+    // Handle ticket
+    if (selectedMenu.menuActionType === MenuActionType.TICKET) {
+      console.log('Handle tickets');
+      return;
     }
   }
 
@@ -305,24 +374,108 @@ export class WebhookService {
       selectedMenu.id,
     );
 
-    const selectedProduct = menuProducts[parseInt(messageBody) - 1];
+    const sortedProducts = sortProducts(menuProducts);
+
+    const selectedProduct = sortedProducts[parseInt(messageBody) - 1];
+
     const messageResponse = await formatDetailedProductResponse(
       selectedProduct,
     );
+
     await whatsapp.sendMessageResponse({
       phoneNumberFrom,
       messageResponse,
     });
-    this.updateUserStep({
+
+    await this.updateUserStep({
       compId,
       phoneNumberId,
       menuId: selectedMenu.id,
-      lastAccessAction: 'addToCart',
       lastAccessTime: new Date().toUTCString(),
+      lastAccessAction: 'productDetailsResponse',
     });
 
-    console.log(selectedProduct);
-    return '';
+    return;
+  }
+
+  async sendProductDetailsResponseStep({
+    compId,
+    menuId,
+    whatsapp,
+    senderName,
+    messageBody,
+    phoneNumberId,
+    phoneNumberFrom,
+  }: {
+    menuId: string;
+    compId: string;
+    whatsapp: Whatsapp;
+    senderName: string;
+    messageBody: string;
+    phoneNumberId: string;
+    phoneNumberFrom: string;
+  }) {
+    const selectedMenu = await this.menusService.findOne(menuId);
+
+    // Check error message
+    if (!checkIsValidNumber(messageBody)) {
+      const errMsg = `Hello *${senderName}* in order for us to help, please reply with the appropriate options above.`;
+      await whatsapp.sendMessageResponse({
+        phoneNumberFrom,
+        messageResponse: errMsg,
+      });
+      return errMsg;
+    }
+
+    const resp = parseInt(messageBody);
+
+    if (resp === 1) {
+      console.log('Proceed to cart');
+      return;
+    }
+
+    // Send back to view all menu products
+    if (resp === 2) {
+      await this.sendMenuProducts({
+        whatsapp,
+        selectedMenu,
+        phoneNumberFrom,
+      });
+
+      await this.updateUserStep({
+        compId,
+        phoneNumberId,
+        menuId: selectedMenu.id,
+        lastAccessAction: 'viewProduct',
+        lastAccessTime: new Date().toUTCString(),
+      });
+
+      return;
+    }
+
+    // Send top menu
+    if (resp === 3) {
+      await this.deleteUserStep({
+        compId,
+        phoneNumberId,
+      });
+
+      await this.sendTopMenus({
+        compId,
+        whatsapp,
+        phoneNumberId,
+        phoneNumberFrom,
+      });
+
+      return;
+    }
+
+    await whatsapp.sendMessageResponse({
+      phoneNumberFrom,
+      messageResponse: 'Please respond with the one of the options above',
+    });
+
+    return;
   }
 
   async sendAddToCartStep({
@@ -426,24 +579,20 @@ export class WebhookService {
       return response;
     }
 
-    /**
-     * =====================================
-     *  Should be it's own function
-     * =====================================
-     */
-
     const userLastStep = await this.getUserLastStep({
       phoneNumberId,
       compId: company.id,
     });
 
     if (!userLastStep) {
-      return await this.sendFirstStep({
+      await this.sendTopMenus({
         whatsapp,
         phoneNumberId,
         phoneNumberFrom,
         compId: company.id,
       });
+
+      return;
     } else {
       if (userLastStep.menuId === 'topMost') {
         return await this.sendSecondStep({
@@ -457,6 +606,18 @@ export class WebhookService {
       } else {
         if (userLastStep.lastAccessAction === 'viewProduct') {
           return await this.sendProductDetailsStep({
+            whatsapp,
+            senderName,
+            messageBody,
+            phoneNumberId,
+            phoneNumberFrom,
+            compId: company.id,
+            menuId: userLastStep.menuId,
+          });
+        }
+
+        if (userLastStep.lastAccessAction === 'productDetailsResponse') {
+          return await this.sendProductDetailsResponseStep({
             whatsapp,
             senderName,
             messageBody,
