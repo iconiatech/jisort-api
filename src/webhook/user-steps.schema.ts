@@ -16,6 +16,9 @@ export class UserStep {
 
   @Prop({ required: true })
   lastAccessTime: string;
+
+  @Prop()
+  prevSteps: string[];
 }
 
 export const UserStepSchema = SchemaFactory.createForClass(UserStep);
