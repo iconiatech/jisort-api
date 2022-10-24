@@ -10,3 +10,11 @@ export enum MenuResponseType {
   STRING = 'string',
   NONE = 'none',
 }
+
+export enum UserStepsType {
+  SUBMENU = 'subMenu',
+  ADD_TO_CART = 'addToCart',
+  SECOND_STEP = 'secondStep',
+  VIEW_PRODUCT = 'viewProduct',
+  VIEW_PRODUCT_DETAILED = 'productDetailsResponse',
+}
