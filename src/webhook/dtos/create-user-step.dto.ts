@@ -1,4 +1,4 @@
-import { IsString } from 'class-validator';
+import { IsString, IsArray, IsOptional } from 'class-validator';
 
 export class CreateUserStepDto {
   @IsString()
@@ -15,4 +15,8 @@ export class CreateUserStepDto {
 
   @IsString()
   lastAccessAction: string;
+
+  @IsOptional()
+  @IsArray()
+  prevSteps: string[];
 }
