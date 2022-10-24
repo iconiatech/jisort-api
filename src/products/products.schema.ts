@@ -18,6 +18,9 @@ export class Product {
   compId: string;
 
   @Prop({ required: true })
+  prodPrice: number;
+
+  @Prop({ required: true })
   prodStockLeft: number;
 
   @Prop({ required: true })
