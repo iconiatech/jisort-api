@@ -81,7 +81,24 @@ export const formatDetailedProductResponse = async (
   const prodOptions = `${opt1}\n${opt2}\n${opt3}`;
 
   const messageResponse = `
-        *Product Info*:\n(NB: You have selected *${product.prodName}*)\n${prodOptions}`;
+        *Product Info*:\n(NB: You have selected *${product.prodName}*)\n\n${prodOptions}`;
+
+  return messageResponse;
+};
+
+export const formatProductCartResponse = async (
+  product: Product,
+): Promise<string> => {
+  const firstLine = `Stock Left *${product.prodName}* -- Each @ *${product.prodPrice}*`;
+
+  const opt1 = '*1.* Enter *1* to add to cart',
+    opt2 = '*2.* Enter *2* to go back',
+    opt3 = '*3.* Back to main menu';
+
+  const prodOptions = `${opt1}\n${opt2}\n${opt3}`;
+
+  const messageResponse = `
+        *Product Info*:\n(NB: You have selected *${product.prodName}*)\n\n${firstLine}`;
 
   return messageResponse;
 };
