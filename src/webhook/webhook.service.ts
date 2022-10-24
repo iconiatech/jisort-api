@@ -13,6 +13,7 @@ import {
   checkIsActiveComp,
   formatMenusResponse,
   formatProductsResponse,
+  formatProductCartResponse,
   formatDetailedProductResponse,
 } from './utils/helpers';
 
@@ -179,9 +180,10 @@ export class WebhookService {
     this.saveUserStep({
       compId,
       phoneNumberId,
-      menuId: 'topMost',
+      menuId: 'secondStep',
       lastAccessAction: '',
       lastAccessTime: new Date().toUTCString(),
+      prevSteps: [],
     });
 
     return;
@@ -227,22 +229,32 @@ export class WebhookService {
         const subMenus = await this.menusService.findMany(
           selectedMenu.subMenus,
         );
+
         const messageResponse = await formatMenusResponse(subMenus);
-        // const response = await whatsapp.sendMessageResponse({
-        //   phoneNumberFrom,
-        //   messageResponse,
-        // });
+
+        await whatsapp.sendMessageResponse({
+          phoneNumberFrom,
+          messageResponse,
+        });
+
         this.updateUserStep({
           compId,
           phoneNumberId,
-          lastAccessAction: '',
           menuId: selectedMenu.id,
+          lastAccessAction: 'subMenu',
           lastAccessTime: new Date().toUTCString(),
+          prevSteps: [],
         });
-        console.log(messageResponse);
-        console.log('Selected menus has sub menus');
-        return messageResponse;
+
+        return;
       }
+
+      await whatsapp.sendMessageResponse({
+        phoneNumberFrom,
+        messageResponse: 'Sorry, there are no more options',
+      });
+
+      return;
     }
     // Handle menu answer
     if (selectedMenu.menuActionType === MenuActionType.ANSWER) {
@@ -270,6 +282,7 @@ export class WebhookService {
         menuId: selectedMenu.id,
         lastAccessAction: 'viewProduct',
         lastAccessTime: new Date().toUTCString(),
+        prevSteps: [],
       });
 
       return;
@@ -313,6 +326,7 @@ export class WebhookService {
         lastAccessAction: '',
         menuId: selectedMenu.id,
         lastAccessTime: new Date().toUTCString(),
+        prevSteps: [],
       });
       console.log(messageResponse);
       console.log('Selected menus has sub menus');
@@ -335,6 +349,7 @@ export class WebhookService {
         menuId: selectedMenu.id,
         lastAccessAction: 'viewProduct',
         lastAccessTime: new Date().toUTCString(),
+        prevSteps: [],
       });
       console.log(messageResponse);
       return '';
@@ -393,6 +408,7 @@ export class WebhookService {
       menuId: selectedMenu.id,
       lastAccessTime: new Date().toUTCString(),
       lastAccessAction: 'productDetailsResponse',
+      prevSteps: [],
     });
 
     return;
@@ -429,8 +445,24 @@ export class WebhookService {
 
     const resp = parseInt(messageBody);
 
+    // Send proceed to cart
+    // Figure out how to get the selected product
     if (resp === 1) {
-      console.log('Proceed to cart');
+      const menuProducts = await this.productsService.getMenuProducts(
+        selectedMenu.id,
+      );
+
+      const sortedProducts = sortProducts(menuProducts);
+
+      const selectedProduct = sortedProducts[parseInt(messageBody) - 1];
+
+      const messageResponse = await formatProductCartResponse(selectedProduct);
+
+      await whatsapp.sendMessageResponse({
+        phoneNumberFrom,
+        messageResponse,
+      });
+
       return;
     }
 
@@ -448,6 +480,7 @@ export class WebhookService {
         menuId: selectedMenu.id,
         lastAccessAction: 'viewProduct',
         lastAccessTime: new Date().toUTCString(),
+        prevSteps: [],
       });
 
       return;
@@ -474,6 +507,123 @@ export class WebhookService {
       phoneNumberFrom,
       messageResponse: 'Please respond with the one of the options above',
     });
+
+    return;
+  }
+
+  async sendSubMenuResponseStep({
+    compId,
+    menuId,
+    whatsapp,
+    senderName,
+    messageBody,
+    phoneNumberId,
+    phoneNumberFrom,
+  }: {
+    menuId: string;
+    compId: string;
+    whatsapp: Whatsapp;
+    senderName: string;
+    messageBody: string;
+    phoneNumberId: string;
+    phoneNumberFrom: string;
+  }) {
+    // Check error message
+    if (!checkIsValidNumber(messageBody)) {
+      const errMsg = `Hello *${senderName}* in order for us to help, please reply with the appropriate options above.`;
+      await whatsapp.sendMessageResponse({
+        phoneNumberFrom,
+        messageResponse: errMsg,
+      });
+      return errMsg;
+    }
+
+    const resp = parseInt(messageBody);
+
+    const selectedMenu = await this.menusService.findOne(menuId);
+    const subMenus = await this.menusService.findMany(selectedMenu.subMenus);
+
+    if (resp > subMenus.length) {
+      await whatsapp.sendMessageResponse({
+        phoneNumberFrom,
+        messageResponse: 'Please respond with the one of the options above',
+      });
+    }
+
+    const currentMenu = sortMenus(subMenus)[resp - 1];
+
+    // Handle menu answer
+    if (currentMenu.menuActionType === MenuActionType.ANSWER) {
+      await this.sendMenuAction({
+        whatsapp,
+        phoneNumberFrom,
+        selectedMenu: currentMenu,
+      });
+
+      const messageResponse = await formatMenusResponse(subMenus);
+
+      await whatsapp.sendMessageResponse({
+        phoneNumberFrom,
+        messageResponse,
+      });
+
+      return;
+    }
+
+    // Handle menu products
+    if (currentMenu.menuActionType === MenuActionType.PRODUCTS) {
+      await this.sendMenuProducts({
+        whatsapp,
+        phoneNumberFrom,
+        selectedMenu: currentMenu,
+      });
+
+      await this.updateUserStep({
+        compId,
+        phoneNumberId,
+        menuId: currentMenu.id,
+        lastAccessAction: 'viewProduct',
+        lastAccessTime: new Date().toUTCString(),
+        prevSteps: [],
+      });
+
+      return;
+    }
+
+    // Handle sub menus
+    if (currentMenu.menuActionType === MenuActionType.SUBMENUS) {
+      // Selected menus has sub meus
+      if (currentMenu.subMenus.length) {
+        const currentSubMenus = await this.menusService.findMany(
+          currentMenu.subMenus,
+        );
+
+        const messageResponse = await formatMenusResponse(currentSubMenus);
+
+        await whatsapp.sendMessageResponse({
+          phoneNumberFrom,
+          messageResponse,
+        });
+
+        this.updateUserStep({
+          compId,
+          phoneNumberId,
+          menuId: currentMenu.id,
+          lastAccessAction: 'subMenu',
+          lastAccessTime: new Date().toUTCString(),
+          prevSteps: [],
+        });
+
+        return;
+      }
+
+      await whatsapp.sendMessageResponse({
+        phoneNumberFrom,
+        messageResponse: 'Sorry, there are no more options',
+      });
+
+      return;
+    }
 
     return;
   }
@@ -516,29 +666,31 @@ export class WebhookService {
       selectedProduct,
     );
 
-    await whatsapp.sendButtonResponse({
-      phoneNumberFrom,
-      messageResponse,
-    });
+    console.log(messageResponse);
 
-    await this.addItemToCart({
-      compId,
-      phoneNumberId,
-      productId: selectedProduct.id,
-      productQty: parseInt(messageBody),
-      lastAccessTime: new Date().toUTCString(),
-    });
+    // await whatsapp.sendButtonResponse({
+    //   phoneNumberFrom,
+    //   messageResponse,
+    // });
 
-    await this.updateUserStep({
-      compId,
-      phoneNumberId,
-      menuId: selectedMenu.id,
-      lastAccessAction: 'addToCart',
-      lastAccessTime: new Date().toUTCString(),
-    });
+    // await this.addItemToCart({
+    //   compId,
+    //   phoneNumberId,
+    //   productId: selectedProduct.id,
+    //   productQty: parseInt(messageBody),
+    //   lastAccessTime: new Date().toUTCString(),
+    // });
 
-    console.log(selectedProduct);
-    return '';
+    // await this.updateUserStep({
+    //   compId,
+    //   phoneNumberId,
+    //   menuId: selectedMenu.id,
+    //   lastAccessAction: 'addToCart',
+    //   lastAccessTime: new Date().toUTCString(),
+    // });
+
+    // console.log(selectedProduct);
+    // return '';
   }
 
   /**
@@ -593,63 +745,65 @@ export class WebhookService {
       });
 
       return;
-    } else {
-      if (userLastStep.menuId === 'topMost') {
-        return await this.sendSecondStep({
-          whatsapp,
-          senderName,
-          messageBody,
-          phoneNumberId,
-          phoneNumberFrom,
-          compId: company.id,
-        });
-      } else {
-        if (userLastStep.lastAccessAction === 'viewProduct') {
-          return await this.sendProductDetailsStep({
-            whatsapp,
-            senderName,
-            messageBody,
-            phoneNumberId,
-            phoneNumberFrom,
-            compId: company.id,
-            menuId: userLastStep.menuId,
-          });
-        }
+    }
 
-        if (userLastStep.lastAccessAction === 'productDetailsResponse') {
-          return await this.sendProductDetailsResponseStep({
-            whatsapp,
-            senderName,
-            messageBody,
-            phoneNumberId,
-            phoneNumberFrom,
-            compId: company.id,
-            menuId: userLastStep.menuId,
-          });
-        }
+    if (userLastStep.menuId === 'secondStep') {
+      return await this.sendSecondStep({
+        whatsapp,
+        senderName,
+        messageBody,
+        phoneNumberId,
+        phoneNumberFrom,
+        compId: company.id,
+      });
+    }
 
-        if (userLastStep.lastAccessAction === 'addToCart') {
-          return await this.sendAddToCartStep({
-            whatsapp,
-            senderName,
-            messageBody,
-            phoneNumberId,
-            phoneNumberFrom,
-            compId: company.id,
-            menuId: userLastStep.menuId,
-          });
-        }
+    if (userLastStep.lastAccessAction === 'viewProduct') {
+      return await this.sendProductDetailsStep({
+        whatsapp,
+        senderName,
+        messageBody,
+        phoneNumberId,
+        phoneNumberFrom,
+        compId: company.id,
+        menuId: userLastStep.menuId,
+      });
+    }
 
-        return await this.sendThirdStep({
-          whatsapp,
-          senderName,
-          messageBody,
-          phoneNumberId,
-          phoneNumberFrom,
-          compId: company.id,
-          menuId: userLastStep.menuId,
-        });
-      }
+    if (userLastStep.lastAccessAction === 'productDetailsResponse') {
+      return await this.sendProductDetailsResponseStep({
+        whatsapp,
+        senderName,
+        messageBody,
+        phoneNumberId,
+        phoneNumberFrom,
+        compId: company.id,
+        menuId: userLastStep.menuId,
+      });
+    }
+
+    if (userLastStep.lastAccessAction === 'subMenu') {
+      return await this.sendSubMenuResponseStep({
+        whatsapp,
+        senderName,
+        messageBody,
+        phoneNumberId,
+        phoneNumberFrom,
+        compId: company.id,
+        menuId: userLastStep.menuId,
+      });
+    }
+
+    if (userLastStep.lastAccessAction === 'addToCart') {
+      return await this.sendAddToCartStep({
+        whatsapp,
+        senderName,
+        messageBody,
+        phoneNumberId,
+        phoneNumberFrom,
+        compId: company.id,
+        menuId: userLastStep.menuId,
+      });
     }
 
     /**
