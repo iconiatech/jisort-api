@@ -18,7 +18,7 @@ export class UserStep {
   lastAccessTime: string;
 
   @Prop()
-  prevSteps: string[];
+  prevChoices: string[];
 }
 
 export const UserStepSchema = SchemaFactory.createForClass(UserStep);
