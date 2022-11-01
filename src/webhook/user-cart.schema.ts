@@ -12,7 +12,13 @@ export class UserCart {
   productId: string;
 
   @Prop({ required: true })
+  productName: string;
+
+  @Prop({ required: true })
   productQty: number;
+
+  @Prop({ required: true })
+  productPrice: number;
 
   @Prop({ required: true })
   phoneNumberId: string;
