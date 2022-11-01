@@ -17,7 +17,7 @@ import {
   formatDetailedProductResponse,
 } from './utils/helpers';
 
-import { MenuTypes } from '../menus/types';
+// import { MenuTypes } from '../menus/types';
 import { Menu } from '../menus/menus.schema';
 
 import { UserCart, UserCartDocument } from './user-cart.schema';
@@ -52,6 +52,21 @@ export class WebhookService {
   async addItemToCart(cartItemDto: AddToCartDto): Promise<UserCart> {
     const addedItem = new this.userCartModel(cartItemDto);
     return addedItem.save();
+  }
+
+  async getUserCartItems({
+    compId,
+    phoneNumberId,
+  }: {
+    phoneNumberId: string;
+    compId: string;
+  }): Promise<UserCart[]> {
+    return this.userCartModel
+      .find({
+        compId,
+        phoneNumberId,
+      })
+      .exec();
   }
 
   async updateUserStep(updateStepDto: CreateUserStepDto): Promise<UserStep> {
@@ -156,6 +171,13 @@ export class WebhookService {
       messageResponse,
     });
 
+    await whatsapp.sendButtonResponse({
+      phoneNumberFrom,
+      btnTitle: 'Go Back',
+      messageResponse: 'cancel',
+      btnTopMessage: 'Click to go back',
+    });
+
     return;
   }
 
@@ -183,7 +205,7 @@ export class WebhookService {
       menuId: 'secondStep',
       lastAccessAction: '',
       lastAccessTime: new Date().toUTCString(),
-      prevSteps: [],
+      prevChoices: [],
     });
 
     return;
@@ -243,7 +265,7 @@ export class WebhookService {
           menuId: selectedMenu.id,
           lastAccessAction: 'subMenu',
           lastAccessTime: new Date().toUTCString(),
-          prevSteps: [],
+          prevChoices: [],
         });
 
         return;
@@ -282,7 +304,7 @@ export class WebhookService {
         menuId: selectedMenu.id,
         lastAccessAction: 'viewProduct',
         lastAccessTime: new Date().toUTCString(),
-        prevSteps: [],
+        prevChoices: [],
       });
 
       return;
@@ -291,68 +313,6 @@ export class WebhookService {
     if (selectedMenu.menuActionType === MenuActionType.TICKET) {
       console.log('Handle tickets');
       return;
-    }
-  }
-
-  async sendThirdStep({
-    compId,
-    menuId,
-    whatsapp,
-    senderName,
-    messageBody,
-    phoneNumberId,
-    phoneNumberFrom,
-  }: {
-    menuId: string;
-    compId: string;
-    whatsapp: Whatsapp;
-    senderName: string;
-    messageBody: string;
-    phoneNumberId: string;
-    phoneNumberFrom: string;
-  }) {
-    const selectedMenu = await this.menusService.findOne(menuId);
-
-    if (selectedMenu.subMenus.length) {
-      const subMenus = await this.menusService.findMany(selectedMenu.subMenus);
-      const messageResponse = await formatMenusResponse(subMenus);
-      // const response = await whatsapp.sendMessageResponse({
-      //   phoneNumberFrom,
-      //   messageResponse,
-      // });
-      this.updateUserStep({
-        compId,
-        phoneNumberId,
-        lastAccessAction: '',
-        menuId: selectedMenu.id,
-        lastAccessTime: new Date().toUTCString(),
-        prevSteps: [],
-      });
-      console.log(messageResponse);
-      console.log('Selected menus has sub menus');
-      return messageResponse;
-      // return response;
-    }
-
-    if (selectedMenu.menuActionType === MenuTypes.PRODUCTS) {
-      const menuProducts = await this.productsService.getMenuProducts(
-        selectedMenu.id,
-      );
-      const messageResponse = await formatProductsResponse(menuProducts);
-      const response = await whatsapp.sendMessageResponse({
-        phoneNumberFrom,
-        messageResponse,
-      });
-      this.updateUserStep({
-        compId,
-        phoneNumberId,
-        menuId: selectedMenu.id,
-        lastAccessAction: 'viewProduct',
-        lastAccessTime: new Date().toUTCString(),
-        prevSteps: [],
-      });
-      console.log(messageResponse);
-      return '';
     }
   }
 
@@ -375,6 +335,25 @@ export class WebhookService {
   }) {
     const selectedMenu = await this.menusService.findOne(menuId);
 
+    if (messageBody === 'cancel') {
+      // Send back the top menu
+      if (selectedMenu.menuIsTopMost) {
+        await this.sendTopMenus({
+          compId,
+          whatsapp,
+          phoneNumberId,
+          phoneNumberFrom,
+        });
+
+        await this.deleteUserStep({
+          compId,
+          phoneNumberId,
+        });
+      }
+
+      return;
+    }
+
     // Check error message
     if (!checkIsValidNumber(messageBody)) {
       const errMsg = `Hello *${senderName}* in order for us to help, please reply with the appropriate options above.`;
@@ -385,13 +364,24 @@ export class WebhookService {
       return errMsg;
     }
 
+    const clientResp = parseInt(messageBody);
+
     const menuProducts = await this.productsService.getMenuProducts(
       selectedMenu.id,
     );
 
     const sortedProducts = sortProducts(menuProducts);
 
-    const selectedProduct = sortedProducts[parseInt(messageBody) - 1];
+    if (clientResp > sortedProducts.length) {
+      await whatsapp.sendMessageResponse({
+        phoneNumberFrom,
+        messageResponse: 'Please respond with the one of the options above',
+      });
+
+      return;
+    }
+
+    const selectedProduct = sortedProducts[clientResp - 1];
 
     const messageResponse = await formatDetailedProductResponse(
       selectedProduct,
@@ -408,7 +398,7 @@ export class WebhookService {
       menuId: selectedMenu.id,
       lastAccessTime: new Date().toUTCString(),
       lastAccessAction: 'productDetailsResponse',
-      prevSteps: [],
+      prevChoices: [`${clientResp}`],
     });
 
     return;
@@ -419,6 +409,7 @@ export class WebhookService {
     menuId,
     whatsapp,
     senderName,
+    prevChoice,
     messageBody,
     phoneNumberId,
     phoneNumberFrom,
@@ -427,6 +418,7 @@ export class WebhookService {
     compId: string;
     whatsapp: Whatsapp;
     senderName: string;
+    prevChoice: number;
     messageBody: string;
     phoneNumberId: string;
     phoneNumberFrom: string;
@@ -434,29 +426,37 @@ export class WebhookService {
     const selectedMenu = await this.menusService.findOne(menuId);
 
     // Check error message
-    if (!checkIsValidNumber(messageBody)) {
-      const errMsg = `Hello *${senderName}* in order for us to help, please reply with the appropriate options above.`;
-      await whatsapp.sendMessageResponse({
-        phoneNumberFrom,
-        messageResponse: errMsg,
-      });
-      return errMsg;
-    }
-
-    const resp = parseInt(messageBody);
-
-    // Send proceed to cart
-    // Figure out how to get the selected product
-    if (resp === 1) {
+    if (checkIsValidNumber(messageBody)) {
       const menuProducts = await this.productsService.getMenuProducts(
         selectedMenu.id,
       );
 
+      const clientResp = parseInt(messageBody);
       const sortedProducts = sortProducts(menuProducts);
+      const selectedProduct = sortedProducts[prevChoice - 1];
 
-      const selectedProduct = sortedProducts[parseInt(messageBody) - 1];
+      if (clientResp > selectedProduct.prodStockLeft) {
+        await whatsapp.sendMessageResponse({
+          phoneNumberFrom,
+          messageResponse: `Stock left is *${selectedProduct.prodStockLeft}*.`,
+        });
 
-      const messageResponse = await formatProductCartResponse(selectedProduct);
+        return;
+      }
+
+      await this.addItemToCart({
+        compId,
+        phoneNumberId,
+        productQty: clientResp,
+        productId: selectedProduct.id,
+        productName: selectedProduct.prodName,
+        productPrice: selectedProduct.prodPrice,
+        lastAccessTime: new Date().toUTCString(),
+      });
+
+      const cartItems = await this.getUserCartItems({ compId, phoneNumberId });
+
+      const messageResponse = await formatProductCartResponse(cartItems);
 
       await whatsapp.sendMessageResponse({
         phoneNumberFrom,
@@ -466,8 +466,10 @@ export class WebhookService {
       return;
     }
 
+    const userResp = messageBody.toLowerCase();
+
     // Send back to view all menu products
-    if (resp === 2) {
+    if (userResp === 'b') {
       await this.sendMenuProducts({
         whatsapp,
         selectedMenu,
@@ -480,14 +482,14 @@ export class WebhookService {
         menuId: selectedMenu.id,
         lastAccessAction: 'viewProduct',
         lastAccessTime: new Date().toUTCString(),
-        prevSteps: [],
+        prevChoices: [],
       });
 
       return;
     }
 
     // Send top menu
-    if (resp === 3) {
+    if (userResp === 'q') {
       await this.deleteUserStep({
         compId,
         phoneNumberId,
@@ -584,7 +586,7 @@ export class WebhookService {
         menuId: currentMenu.id,
         lastAccessAction: 'viewProduct',
         lastAccessTime: new Date().toUTCString(),
-        prevSteps: [],
+        prevChoices: [],
       });
 
       return;
@@ -611,7 +613,7 @@ export class WebhookService {
           menuId: currentMenu.id,
           lastAccessAction: 'subMenu',
           lastAccessTime: new Date().toUTCString(),
-          prevSteps: [],
+          prevChoices: [],
         });
 
         return;
@@ -626,71 +628,6 @@ export class WebhookService {
     }
 
     return;
-  }
-
-  async sendAddToCartStep({
-    compId,
-    menuId,
-    whatsapp,
-    senderName,
-    messageBody,
-    phoneNumberId,
-    phoneNumberFrom,
-  }: {
-    menuId: string;
-    compId: string;
-    whatsapp: Whatsapp;
-    senderName: string;
-    messageBody: string;
-    phoneNumberId: string;
-    phoneNumberFrom: string;
-  }) {
-    const selectedMenu = await this.menusService.findOne(menuId);
-
-    // Check error message
-    if (!checkIsValidNumber(messageBody)) {
-      const errMsg = `Hello *${senderName}* in order for us to help, please reply with the appropriate options above.`;
-      await whatsapp.sendMessageResponse({
-        phoneNumberFrom,
-        messageResponse: errMsg,
-      });
-      return errMsg;
-    }
-
-    const menuProducts = await this.productsService.getMenuProducts(
-      selectedMenu.id,
-    );
-
-    const selectedProduct = menuProducts[parseInt(messageBody) - 1];
-    const messageResponse = await formatDetailedProductResponse(
-      selectedProduct,
-    );
-
-    console.log(messageResponse);
-
-    // await whatsapp.sendButtonResponse({
-    //   phoneNumberFrom,
-    //   messageResponse,
-    // });
-
-    // await this.addItemToCart({
-    //   compId,
-    //   phoneNumberId,
-    //   productId: selectedProduct.id,
-    //   productQty: parseInt(messageBody),
-    //   lastAccessTime: new Date().toUTCString(),
-    // });
-
-    // await this.updateUserStep({
-    //   compId,
-    //   phoneNumberId,
-    //   menuId: selectedMenu.id,
-    //   lastAccessAction: 'addToCart',
-    //   lastAccessTime: new Date().toUTCString(),
-    // });
-
-    // console.log(selectedProduct);
-    // return '';
   }
 
   /**
@@ -771,7 +708,7 @@ export class WebhookService {
     }
 
     if (userLastStep.lastAccessAction === 'productDetailsResponse') {
-      return await this.sendProductDetailsResponseStep({
+      await this.sendProductDetailsResponseStep({
         whatsapp,
         senderName,
         messageBody,
@@ -779,7 +716,12 @@ export class WebhookService {
         phoneNumberFrom,
         compId: company.id,
         menuId: userLastStep.menuId,
+        prevChoice: parseInt(
+          userLastStep.prevChoices[userLastStep.prevChoices.length - 1],
+        ),
       });
+
+      return;
     }
 
     if (userLastStep.lastAccessAction === 'subMenu') {
@@ -793,24 +735,6 @@ export class WebhookService {
         menuId: userLastStep.menuId,
       });
     }
-
-    if (userLastStep.lastAccessAction === 'addToCart') {
-      return await this.sendAddToCartStep({
-        whatsapp,
-        senderName,
-        messageBody,
-        phoneNumberId,
-        phoneNumberFrom,
-        compId: company.id,
-        menuId: userLastStep.menuId,
-      });
-    }
-
-    /**
-     * =====================================
-     *  Should be it's own function
-     * =====================================
-     */
 
     return 'userLastStep';
   }
