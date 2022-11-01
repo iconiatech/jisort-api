@@ -18,5 +18,5 @@ export class CreateUserStepDto {
 
   @IsOptional()
   @IsArray()
-  prevSteps: string[];
+  prevChoices: string[];
 }
