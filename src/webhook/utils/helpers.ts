@@ -1,5 +1,6 @@
 import { sortMenus, sortProducts } from '../../utils';
 
+import { UserCart } from '../user-cart.schema';
 import { Menu } from '../../menus/menus.schema';
 import { Product } from '../../products/products.schema';
 import { Company } from '../../companies/companies.schema';
@@ -74,31 +75,43 @@ export const formatProductsResponse = async (
 export const formatDetailedProductResponse = async (
   product: Product,
 ): Promise<string> => {
-  const opt1 = '*1.* Enter *1* to add to cart',
-    opt2 = '*2.* Enter *2* to go back',
-    opt3 = '*3.* Back to main menu';
+  const firstLine = `Stock Left *${product.prodStockLeft}* -- Each @ *${product.prodPrice}*\n`;
+
+  const opt1 = '*1.* Enter the *Qty* to add to cart\n',
+    opt2 = '*B.* Enter *B* to go back to view products',
+    opt3 = '*Q.* Enter *Q* to go back to the main menu';
 
   const prodOptions = `${opt1}\n${opt2}\n${opt3}`;
 
   const messageResponse = `
-        *Product Info*:\n(NB: You have selected *${product.prodName}*)\n\n${prodOptions}`;
+        *Product Info*:\n(NB: You have selected *${product.prodName}*)\n${firstLine}\n${prodOptions}`;
 
   return messageResponse;
 };
 
 export const formatProductCartResponse = async (
-  product: Product,
+  items: UserCart[],
 ): Promise<string> => {
-  const firstLine = `Stock Left *${product.prodName}* -- Each @ *${product.prodPrice}*`;
+  const firstLine = `You have *${items.length}* items in cart totaling *Total*`;
 
-  const opt1 = '*1.* Enter *1* to add to cart',
-    opt2 = '*2.* Enter *2* to go back',
-    opt3 = '*3.* Back to main menu';
+  let newStr = ``;
 
-  const prodOptions = `${opt1}\n${opt2}\n${opt3}`;
+  items.forEach((it, i) => {
+    const item = `\n*${i + 1}*. ${it.productName} -- *${it.productQty}* x *${
+      it.productPrice
+    }*`;
+    newStr += item;
+  });
+
+  const opt1 = '=====================================\n',
+    opt2 = '*P.* Enter *P* to proceed to pay',
+    opt3 = '*B.* Enter *B* to go back to view products',
+    opt4 = '*Q.* Enter *Q* clear cart and go back to the main menu';
+
+  const menuOptions = `${opt1}\n${opt2}\n${opt3}\n${opt4}`;
 
   const messageResponse = `
-        *Product Info*:\n(NB: You have selected *${product.prodName}*)\n\n${firstLine}`;
+        *Cart Info*:\n${firstLine}\n${newStr}\n${menuOptions}`;
 
   return messageResponse;
 };
