@@ -70,9 +70,13 @@ export class Whatsapp {
   }
 
   async sendButtonResponse({
+    btnTitle,
+    btnTopMessage,
     messageResponse,
     phoneNumberFrom,
   }: {
+    btnTitle: string;
+    btnTopMessage: string;
     phoneNumberFrom: string;
     messageResponse: string;
   }): Promise<string> {
@@ -93,15 +97,15 @@ export class Whatsapp {
       interactive: {
         type: 'button',
         body: {
-          text: `${messageResponse}`,
+          text: `${btnTopMessage}`,
         },
         action: {
           buttons: [
             {
               type: 'reply',
               reply: {
-                id: 'Back',
-                title: 'Back',
+                id: `${messageResponse}`,
+                title: `${btnTitle}`,
               },
             },
           ],
