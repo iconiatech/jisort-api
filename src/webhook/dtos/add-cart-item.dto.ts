@@ -11,6 +11,12 @@ export class AddToCartDto {
   productQty: number;
 
   @IsString()
+  productName: string;
+
+  @IsNumber()
+  productPrice: number;
+
+  @IsString()
   phoneNumberId: string;
 
   @IsString()
