@@ -8,7 +8,7 @@ export class CreateUserStepDto {
   menuId: string;
 
   @IsString()
-  phoneNumberId: string;
+  phoneNumberFrom: string;
 
   @IsString()
   lastAccessTime: string;
