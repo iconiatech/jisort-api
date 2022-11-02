@@ -56,15 +56,15 @@ export class WebhookService {
 
   async getUserCartItems({
     compId,
-    phoneNumberId,
+    phoneNumberFrom,
   }: {
-    phoneNumberId: string;
     compId: string;
+    phoneNumberFrom: string;
   }): Promise<UserCart[]> {
     return this.userCartModel
       .find({
         compId,
-        phoneNumberId,
+        phoneNumberFrom,
       })
       .exec();
   }
@@ -72,7 +72,7 @@ export class WebhookService {
   async updateUserStep(updateStepDto: CreateUserStepDto): Promise<UserStep> {
     const step = await this.getUserLastStep({
       compId: updateStepDto.compId,
-      phoneNumberId: updateStepDto.phoneNumberId,
+      phoneNumberFrom: updateStepDto.phoneNumberFrom,
     });
 
     Object.assign(step, updateStepDto);
@@ -82,26 +82,26 @@ export class WebhookService {
 
   async deleteUserStep({
     compId,
-    phoneNumberId,
+    phoneNumberFrom,
   }: {
-    phoneNumberId: string;
     compId: string;
+    phoneNumberFrom: string;
   }) {
-    await this.userStepModel.deleteOne({ compId, phoneNumberId }).exec();
+    await this.userStepModel.deleteOne({ compId, phoneNumberFrom }).exec();
     return;
   }
 
   async getUserLastStep({
     compId,
-    phoneNumberId,
+    phoneNumberFrom,
   }: {
-    phoneNumberId: string;
     compId: string;
+    phoneNumberFrom: string;
   }): Promise<UserStep> {
     let step: UserStep | null;
 
     try {
-      step = await this.userStepModel.findOne({ phoneNumberId, compId });
+      step = await this.userStepModel.findOne({ phoneNumberFrom, compId });
     } catch (error) {
       step = null;
     }
@@ -184,12 +184,10 @@ export class WebhookService {
   async sendTopMenus({
     compId,
     whatsapp,
-    phoneNumberId,
     phoneNumberFrom,
   }: {
     compId: string;
     whatsapp: Whatsapp;
-    phoneNumberId: string;
     phoneNumberFrom: string;
   }) {
     const messageResponse = await this.formatTopMenus(compId);
@@ -201,7 +199,7 @@ export class WebhookService {
 
     this.saveUserStep({
       compId,
-      phoneNumberId,
+      phoneNumberFrom,
       menuId: 'secondStep',
       lastAccessAction: '',
       lastAccessTime: new Date().toUTCString(),
@@ -216,14 +214,12 @@ export class WebhookService {
     whatsapp,
     senderName,
     messageBody,
-    phoneNumberId,
     phoneNumberFrom,
   }: {
     compId: string;
     whatsapp: Whatsapp;
     senderName: string;
     messageBody: string;
-    phoneNumberId: string;
     phoneNumberFrom: string;
   }) {
     // Check error message
@@ -261,7 +257,7 @@ export class WebhookService {
 
         this.updateUserStep({
           compId,
-          phoneNumberId,
+          phoneNumberFrom,
           menuId: selectedMenu.id,
           lastAccessAction: 'subMenu',
           lastAccessTime: new Date().toUTCString(),
@@ -281,11 +277,10 @@ export class WebhookService {
     // Handle menu answer
     if (selectedMenu.menuActionType === MenuActionType.ANSWER) {
       await this.sendMenuAction({ selectedMenu, phoneNumberFrom, whatsapp });
-      await this.deleteUserStep({ compId, phoneNumberId });
+      await this.deleteUserStep({ compId, phoneNumberFrom });
       await this.sendTopMenus({
         compId,
         whatsapp,
-        phoneNumberId,
         phoneNumberFrom,
       });
       return;
@@ -300,7 +295,7 @@ export class WebhookService {
 
       await this.updateUserStep({
         compId,
-        phoneNumberId,
+        phoneNumberFrom,
         menuId: selectedMenu.id,
         lastAccessAction: 'viewProduct',
         lastAccessTime: new Date().toUTCString(),
@@ -322,7 +317,6 @@ export class WebhookService {
     whatsapp,
     senderName,
     messageBody,
-    phoneNumberId,
     phoneNumberFrom,
   }: {
     menuId: string;
@@ -330,7 +324,6 @@ export class WebhookService {
     whatsapp: Whatsapp;
     senderName: string;
     messageBody: string;
-    phoneNumberId: string;
     phoneNumberFrom: string;
   }) {
     const selectedMenu = await this.menusService.findOne(menuId);
@@ -341,13 +334,12 @@ export class WebhookService {
         await this.sendTopMenus({
           compId,
           whatsapp,
-          phoneNumberId,
           phoneNumberFrom,
         });
 
         await this.deleteUserStep({
           compId,
-          phoneNumberId,
+          phoneNumberFrom,
         });
       }
 
@@ -392,9 +384,23 @@ export class WebhookService {
       messageResponse,
     });
 
+    await whatsapp.sendButtonResponse({
+      phoneNumberFrom,
+      btnTitle: 'Go Back',
+      messageResponse: 'back',
+      btnTopMessage: 'Click to go back',
+    });
+
+    await whatsapp.sendButtonResponse({
+      phoneNumberFrom,
+      btnTitle: 'Go To Main Menu',
+      messageResponse: 'quit',
+      btnTopMessage: 'Click to go to main menu',
+    });
+
     await this.updateUserStep({
       compId,
-      phoneNumberId,
+      phoneNumberFrom,
       menuId: selectedMenu.id,
       lastAccessTime: new Date().toUTCString(),
       lastAccessAction: 'productDetailsResponse',
@@ -411,7 +417,6 @@ export class WebhookService {
     senderName,
     prevChoice,
     messageBody,
-    phoneNumberId,
     phoneNumberFrom,
   }: {
     menuId: string;
@@ -420,7 +425,6 @@ export class WebhookService {
     senderName: string;
     prevChoice: number;
     messageBody: string;
-    phoneNumberId: string;
     phoneNumberFrom: string;
   }) {
     const selectedMenu = await this.menusService.findOne(menuId);
@@ -446,7 +450,7 @@ export class WebhookService {
 
       await this.addItemToCart({
         compId,
-        phoneNumberId,
+        phoneNumberFrom,
         productQty: clientResp,
         productId: selectedProduct.id,
         productName: selectedProduct.prodName,
@@ -454,7 +458,10 @@ export class WebhookService {
         lastAccessTime: new Date().toUTCString(),
       });
 
-      const cartItems = await this.getUserCartItems({ compId, phoneNumberId });
+      const cartItems = await this.getUserCartItems({
+        compId,
+        phoneNumberFrom,
+      });
 
       const messageResponse = await formatProductCartResponse(cartItems);
 
@@ -469,7 +476,7 @@ export class WebhookService {
     const userResp = messageBody.toLowerCase();
 
     // Send back to view all menu products
-    if (userResp === 'b') {
+    if (userResp === 'back') {
       await this.sendMenuProducts({
         whatsapp,
         selectedMenu,
@@ -478,7 +485,7 @@ export class WebhookService {
 
       await this.updateUserStep({
         compId,
-        phoneNumberId,
+        phoneNumberFrom,
         menuId: selectedMenu.id,
         lastAccessAction: 'viewProduct',
         lastAccessTime: new Date().toUTCString(),
@@ -489,16 +496,15 @@ export class WebhookService {
     }
 
     // Send top menu
-    if (userResp === 'q') {
+    if (userResp === 'quit') {
       await this.deleteUserStep({
         compId,
-        phoneNumberId,
+        phoneNumberFrom,
       });
 
       await this.sendTopMenus({
         compId,
         whatsapp,
-        phoneNumberId,
         phoneNumberFrom,
       });
 
@@ -519,7 +525,6 @@ export class WebhookService {
     whatsapp,
     senderName,
     messageBody,
-    phoneNumberId,
     phoneNumberFrom,
   }: {
     menuId: string;
@@ -527,7 +532,6 @@ export class WebhookService {
     whatsapp: Whatsapp;
     senderName: string;
     messageBody: string;
-    phoneNumberId: string;
     phoneNumberFrom: string;
   }) {
     // Check error message
@@ -582,7 +586,7 @@ export class WebhookService {
 
       await this.updateUserStep({
         compId,
-        phoneNumberId,
+        phoneNumberFrom,
         menuId: currentMenu.id,
         lastAccessAction: 'viewProduct',
         lastAccessTime: new Date().toUTCString(),
@@ -609,7 +613,7 @@ export class WebhookService {
 
         this.updateUserStep({
           compId,
-          phoneNumberId,
+          phoneNumberFrom,
           menuId: currentMenu.id,
           lastAccessAction: 'subMenu',
           lastAccessTime: new Date().toUTCString(),
@@ -669,14 +673,13 @@ export class WebhookService {
     }
 
     const userLastStep = await this.getUserLastStep({
-      phoneNumberId,
+      phoneNumberFrom,
       compId: company.id,
     });
 
     if (!userLastStep) {
       await this.sendTopMenus({
         whatsapp,
-        phoneNumberId,
         phoneNumberFrom,
         compId: company.id,
       });
@@ -689,7 +692,6 @@ export class WebhookService {
         whatsapp,
         senderName,
         messageBody,
-        phoneNumberId,
         phoneNumberFrom,
         compId: company.id,
       });
@@ -700,7 +702,6 @@ export class WebhookService {
         whatsapp,
         senderName,
         messageBody,
-        phoneNumberId,
         phoneNumberFrom,
         compId: company.id,
         menuId: userLastStep.menuId,
@@ -712,7 +713,6 @@ export class WebhookService {
         whatsapp,
         senderName,
         messageBody,
-        phoneNumberId,
         phoneNumberFrom,
         compId: company.id,
         menuId: userLastStep.menuId,
@@ -729,7 +729,6 @@ export class WebhookService {
         whatsapp,
         senderName,
         messageBody,
-        phoneNumberId,
         phoneNumberFrom,
         compId: company.id,
         menuId: userLastStep.menuId,
