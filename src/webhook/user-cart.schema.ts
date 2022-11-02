@@ -21,7 +21,7 @@ export class UserCart {
   productPrice: number;
 
   @Prop({ required: true })
-  phoneNumberId: string;
+  phoneNumberFrom: string;
 
   @Prop({ required: true })
   lastAccessTime: string;
