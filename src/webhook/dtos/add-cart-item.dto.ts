@@ -17,7 +17,7 @@ export class AddToCartDto {
   productPrice: number;
 
   @IsString()
-  phoneNumberId: string;
+  phoneNumberFrom: string;
 
   @IsString()
   lastAccessTime: string;
