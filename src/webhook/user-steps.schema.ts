@@ -9,7 +9,7 @@ export class UserStep {
   menuId: string;
 
   @Prop({ required: true })
-  phoneNumberId: string;
+  phoneNumberFrom: string;
 
   @Prop()
   lastAccessAction: string;
