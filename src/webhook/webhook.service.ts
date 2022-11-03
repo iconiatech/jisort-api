@@ -539,10 +539,10 @@ export class WebhookService {
 
     // Send top menu
     if (messageBody === 'mainMenu') {
-      // await this.deleteUserStep({
-      //   compId,
-      //   phoneNumberFrom,
-      // });
+      await this.deleteUserStep({
+        compId,
+        phoneNumberFrom,
+      });
 
       await this.sendTopMenus({
         compId,
