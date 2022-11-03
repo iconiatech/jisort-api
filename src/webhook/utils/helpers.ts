@@ -77,11 +77,9 @@ export const formatDetailedProductResponse = async (
 ): Promise<string> => {
   const firstLine = `Stock Left *${product.prodStockLeft}* -- Each @ *${product.prodPrice}*\n`;
 
-  const opt1 = '*1.* Enter the *Qty* to add to cart\n',
-    opt2 = '*B.* Enter *B* to go back to view products',
-    opt3 = '*Q.* Enter *Q* to go back to the main menu';
+  const opt1 = '*1.* Enter the *Qty* to add to cart\n';
 
-  const prodOptions = `${opt1}\n${opt2}\n${opt3}`;
+  const prodOptions = `${opt1}`;
 
   const messageResponse = `
         *Product Info*:\n(NB: You have selected *${product.prodName}*)\n${firstLine}\n${prodOptions}`;
