@@ -18,3 +18,11 @@ export enum UserStepsType {
   VIEW_PRODUCT = 'viewProduct',
   VIEW_PRODUCT_DETAILED = 'productDetailsResponse',
 }
+
+export interface WhatsappBtn {
+  type: 'reply';
+  reply: {
+    id: string;
+    title: string;
+  };
+}
