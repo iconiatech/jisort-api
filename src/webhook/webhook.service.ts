@@ -392,7 +392,26 @@ export class WebhookService {
       selectedProduct,
     );
 
-    await whatsapp.sendMessageResponse({
+    const productsBtn: WhatsappBtn = {
+      type: 'reply',
+      reply: {
+        id: 'back',
+        title: 'All Products',
+      },
+    };
+
+    const mainMenuBtn: WhatsappBtn = {
+      type: 'reply',
+      reply: {
+        id: 'mainMenu',
+        title: 'Main Menu',
+      },
+    };
+
+    const buttons = [productsBtn, mainMenuBtn];
+
+    await whatsapp.sendButtonResponse({
+      buttons,
       phoneNumberFrom,
       messageResponse,
     });
@@ -413,7 +432,6 @@ export class WebhookService {
     compId,
     menuId,
     whatsapp,
-    senderName,
     prevChoice,
     messageBody,
     phoneNumberFrom,
@@ -464,7 +482,34 @@ export class WebhookService {
 
       const messageResponse = await formatProductCartResponse(cartItems);
 
-      await whatsapp.sendMessageResponse({
+      const productsBtn: WhatsappBtn = {
+        type: 'reply',
+        reply: {
+          id: 'back',
+          title: 'All Products',
+        },
+      };
+
+      const mainMenuBtn: WhatsappBtn = {
+        type: 'reply',
+        reply: {
+          id: 'mainMenu',
+          title: 'Main Menu',
+        },
+      };
+
+      const payButton: WhatsappBtn = {
+        type: 'reply',
+        reply: {
+          id: 'pay',
+          title: 'Proceed to Pay',
+        },
+      };
+
+      const buttons = [payButton, productsBtn, mainMenuBtn];
+
+      await whatsapp.sendButtonResponse({
+        buttons,
         phoneNumberFrom,
         messageResponse,
       });
@@ -472,10 +517,8 @@ export class WebhookService {
       return;
     }
 
-    const userResp = messageBody.toLowerCase();
-
     // Send back to view all menu products
-    if (userResp === 'back') {
+    if (messageBody === 'back') {
       await this.sendMenuProducts({
         whatsapp,
         selectedMenu,
@@ -495,11 +538,11 @@ export class WebhookService {
     }
 
     // Send top menu
-    if (userResp === 'quit') {
-      await this.deleteUserStep({
-        compId,
-        phoneNumberFrom,
-      });
+    if (messageBody === 'mainMenu') {
+      // await this.deleteUserStep({
+      //   compId,
+      //   phoneNumberFrom,
+      // });
 
       await this.sendTopMenus({
         compId,
