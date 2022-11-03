@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { WhatsappBtn } from './globalTypes';
 
 export class Whatsapp {
   bearerToken: string;
@@ -70,15 +71,13 @@ export class Whatsapp {
   }
 
   async sendButtonResponse({
-    btnTitle,
-    btnTopMessage,
+    buttons,
     messageResponse,
     phoneNumberFrom,
   }: {
-    btnTitle: string;
-    btnTopMessage: string;
-    phoneNumberFrom: string;
+    buttons: WhatsappBtn[];
     messageResponse: string;
+    phoneNumberFrom: string;
   }): Promise<string> {
     const fbUrl = `https://graph.facebook.com/v12.0/${this.phoneNumberId}/messages`;
 
@@ -97,18 +96,10 @@ export class Whatsapp {
       interactive: {
         type: 'button',
         body: {
-          text: `${btnTopMessage}`,
+          text: `${messageResponse}`,
         },
         action: {
-          buttons: [
-            {
-              type: 'reply',
-              reply: {
-                id: `${messageResponse}`,
-                title: `${btnTitle}`,
-              },
-            },
-          ],
+          buttons,
         },
       },
     };
