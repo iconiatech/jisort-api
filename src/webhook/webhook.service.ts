@@ -2,7 +2,7 @@ import { Model } from 'mongoose';
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 
-import { MenuActionType } from '../utils/globalTypes';
+import { MenuActionType, WhatsappBtn } from '../utils/globalTypes';
 import {
   Whatsapp,
   sortMenus,
@@ -166,16 +166,28 @@ export class WebhookService {
 
     const messageResponse = await formatProductsResponse(menuProducts);
 
-    await whatsapp.sendMessageResponse({
-      phoneNumberFrom,
-      messageResponse,
-    });
+    const backButton: WhatsappBtn = {
+      type: 'reply',
+      reply: {
+        id: 'back',
+        title: 'Back',
+      },
+    };
+
+    const mainMenuBtn: WhatsappBtn = {
+      type: 'reply',
+      reply: {
+        id: 'mainMenu',
+        title: 'Back to Main Menu',
+      },
+    };
+
+    const buttons = [selectedMenu.menuIsTopMost && backButton, mainMenuBtn];
 
     await whatsapp.sendButtonResponse({
+      buttons,
       phoneNumberFrom,
-      btnTitle: 'Go Back',
-      messageResponse: 'cancel',
-      btnTopMessage: 'Click to go back',
+      messageResponse,
     });
 
     return;
@@ -328,15 +340,16 @@ export class WebhookService {
   }) {
     const selectedMenu = await this.menusService.findOne(menuId);
 
-    if (messageBody === 'cancel') {
+    if (messageBody === 'back' || messageBody === 'mainMenu') {
       // Send back the top menu
-      if (selectedMenu.menuIsTopMost) {
-        await this.sendTopMenus({
-          compId,
-          whatsapp,
-          phoneNumberFrom,
-        });
+      await this.sendTopMenus({
+        compId,
+        whatsapp,
+        phoneNumberFrom,
+      });
 
+      // Clear steps if this is a top menu
+      if (selectedMenu.menuIsTopMost) {
         await this.deleteUserStep({
           compId,
           phoneNumberFrom,
@@ -382,20 +395,6 @@ export class WebhookService {
     await whatsapp.sendMessageResponse({
       phoneNumberFrom,
       messageResponse,
-    });
-
-    await whatsapp.sendButtonResponse({
-      phoneNumberFrom,
-      btnTitle: 'Go Back',
-      messageResponse: 'back',
-      btnTopMessage: 'Click to go back',
-    });
-
-    await whatsapp.sendButtonResponse({
-      phoneNumberFrom,
-      btnTitle: 'Go To Main Menu',
-      messageResponse: 'quit',
-      btnTopMessage: 'Click to go to main menu',
     });
 
     await this.updateUserStep({
