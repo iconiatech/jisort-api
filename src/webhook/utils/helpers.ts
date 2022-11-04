@@ -101,15 +101,7 @@ export const formatProductCartResponse = async (
     newStr += item;
   });
 
-  const opt1 = '=====================================\n',
-    opt2 = '*P.* Enter *P* to proceed to pay',
-    opt3 = '*B.* Enter *B* to go back to view products',
-    opt4 = '*Q.* Enter *Q* clear cart and go back to the main menu';
-
-  const menuOptions = `${opt1}\n${opt2}\n${opt3}\n${opt4}`;
-
-  const messageResponse = `
-        *Cart Info*:\n${firstLine}\n${newStr}\n${menuOptions}`;
+  const messageResponse = `*Cart Info*:\n${firstLine}\n${newStr}`;
 
   return messageResponse;
 };
