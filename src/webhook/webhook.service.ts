@@ -262,9 +262,18 @@ export class WebhookService {
 
         const messageResponse = await formatMenusResponse(subMenus);
 
-        await whatsapp.sendMessageResponse({
+        const mainMenuBtn: WhatsappBtn = {
+          type: 'reply',
+          reply: {
+            id: 'mainMenu',
+            title: 'Back to Main Menu',
+          },
+        };
+
+        await whatsapp.sendButtonResponse({
           phoneNumberFrom,
           messageResponse,
+          buttons: [mainMenuBtn],
         });
 
         this.updateUserStep({
@@ -576,6 +585,22 @@ export class WebhookService {
     messageBody: string;
     phoneNumberFrom: string;
   }) {
+    // Send top menu
+    if (messageBody === 'mainMenu') {
+      await this.deleteUserStep({
+        compId,
+        phoneNumberFrom,
+      });
+
+      await this.sendTopMenus({
+        compId,
+        whatsapp,
+        phoneNumberFrom,
+      });
+
+      return;
+    }
+
     // Check error message
     if (!checkIsValidNumber(messageBody)) {
       const errMsg = `Hello *${senderName}* in order for us to help, please reply with the appropriate options above.`;
@@ -648,9 +673,18 @@ export class WebhookService {
 
         const messageResponse = await formatMenusResponse(currentSubMenus);
 
-        await whatsapp.sendMessageResponse({
+        const mainMenuBtn: WhatsappBtn = {
+          type: 'reply',
+          reply: {
+            id: 'mainMenu',
+            title: 'Back to Main Menu',
+          },
+        };
+
+        await whatsapp.sendButtonResponse({
           phoneNumberFrom,
           messageResponse,
+          buttons: [mainMenuBtn],
         });
 
         this.updateUserStep({
