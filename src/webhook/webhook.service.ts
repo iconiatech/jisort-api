@@ -54,6 +54,15 @@ export class WebhookService {
     return addedItem.save();
   }
 
+  async updateUserCartItem(
+    cartItemDto: AddToCartDto,
+    qty: number,
+  ): Promise<UserCart> {
+    cartItemDto.productQty = qty;
+
+    return new this.userCartModel(cartItemDto).save();
+  }
+
   async getUserCartItems({
     compId,
     phoneNumberFrom,
@@ -67,6 +76,29 @@ export class WebhookService {
         phoneNumberFrom,
       })
       .exec();
+  }
+
+  async checkUserCartItem({
+    compId,
+    productId,
+    phoneNumberFrom,
+  }: {
+    compId: string;
+    productId: string;
+    phoneNumberFrom: string;
+  }): Promise<UserCart | null> {
+    let item: UserCart | null = null;
+    try {
+      item = await this.userCartModel.findOne({
+        compId,
+        productId,
+        phoneNumberFrom,
+      });
+    } catch (error) {
+      item = null;
+    }
+
+    return item;
   }
 
   async updateUserStep(updateStepDto: CreateUserStepDto): Promise<UserStep> {
@@ -430,14 +462,14 @@ export class WebhookService {
       phoneNumberFrom,
       menuId: selectedMenu.id,
       lastAccessTime: new Date().toUTCString(),
-      lastAccessAction: 'productDetailsResponse',
+      lastAccessAction: 'cartResponse',
       prevChoices: [`${clientResp}`],
     });
 
     return;
   }
 
-  async sendProductDetailsResponseStep({
+  async sendCartResponseStep({
     compId,
     menuId,
     whatsapp,
@@ -455,7 +487,7 @@ export class WebhookService {
   }) {
     const selectedMenu = await this.menusService.findOne(menuId);
 
-    // Check error message
+    // Check if number to add to cart
     if (checkIsValidNumber(messageBody)) {
       const menuProducts = await this.productsService.getMenuProducts(
         selectedMenu.id,
@@ -474,15 +506,26 @@ export class WebhookService {
         return;
       }
 
-      await this.addItemToCart({
+      const exists = await this.checkUserCartItem({
         compId,
         phoneNumberFrom,
-        productQty: clientResp,
         productId: selectedProduct.id,
-        productName: selectedProduct.prodName,
-        productPrice: selectedProduct.prodPrice,
-        lastAccessTime: new Date().toUTCString(),
       });
+
+      if (exists) {
+        const newQty = exists.productQty + clientResp;
+        await this.updateUserCartItem(exists, newQty);
+      } else {
+        await this.addItemToCart({
+          compId,
+          phoneNumberFrom,
+          productQty: clientResp,
+          productId: selectedProduct.id,
+          productName: selectedProduct.prodName,
+          productPrice: selectedProduct.prodPrice,
+          lastAccessTime: new Date().toUTCString(),
+        });
+      }
 
       const cartItems = await this.getUserCartItems({
         compId,
@@ -784,8 +827,8 @@ export class WebhookService {
       });
     }
 
-    if (userLastStep.lastAccessAction === 'productDetailsResponse') {
-      await this.sendProductDetailsResponseStep({
+    if (userLastStep.lastAccessAction === 'cartResponse') {
+      await this.sendCartResponseStep({
         whatsapp,
         senderName,
         messageBody,
