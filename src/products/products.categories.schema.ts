@@ -6,6 +6,9 @@ export type ProductCategoryDocument = ProductCategory & Document;
 @Schema()
 export class ProductCategory {
   @Prop({ required: true })
+  id: string;
+
+  @Prop({ required: true })
   catName: string;
 
   @Prop({ required: true })

@@ -10,8 +10,14 @@ export class CreateProductDto {
   @IsString()
   compId: string;
 
+  @IsString()
+  prodPrice: number;
+
   @IsNumber()
   prodStockLeft: number;
+
+  @IsNumber()
+  prodMenuNumber: number;
 
   @IsArray()
   prodCategories: string[];

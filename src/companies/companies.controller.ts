@@ -1,24 +1,29 @@
-import { Controller, Get, Post, Body, Param } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Put } from '@nestjs/common';
 
 import { CompaniesService } from './companies.service';
-import { CreateCompanyDto } from './dtos/create-company-dto';
+import { CreateCompanyDto, UpdateCompanyDto } from './dtos';
 
 @Controller('companies')
 export class CompaniesController {
   constructor(private companiesService: CompaniesService) {}
 
   @Get()
-  getAll() {
-    return this.companiesService.findAll();
+  async getAll() {
+    return await this.companiesService.findAll();
   }
 
   @Post()
-  create(@Body() body: CreateCompanyDto) {
-    return this.companiesService.create(body);
+  async create(@Body() body: CreateCompanyDto) {
+    return await this.companiesService.create(body);
   }
 
   @Get('/:id')
-  getSingle(@Param('id') id: string) {
-    return this.companiesService.findOne(id);
+  async getSingle(@Param('id') id: string) {
+    return await this.companiesService.findOne(id);
+  }
+
+  @Put('/:id')
+  async update(@Param('id') id: string, @Body() body: UpdateCompanyDto) {
+    return await this.companiesService.update(id, body);
   }
 }

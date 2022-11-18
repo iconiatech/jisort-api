@@ -6,6 +6,9 @@ export type CompanyDocument = Company & Document;
 @Schema()
 export class Company {
   @Prop({ required: true })
+  id: string;
+
+  @Prop({ required: true })
   compName: string;
 
   @Prop({ required: true })
@@ -27,6 +30,9 @@ export class Company {
   compType: string;
 
   @Prop()
+  compBearerToken: string;
+
+  @Prop()
   isActive: boolean;
 
   @Prop({ required: true })
@@ -37,6 +43,12 @@ export class Company {
 
   @Prop()
   compClosingTime: string;
+
+  @Prop()
+  createdAt: string;
+
+  @Prop()
+  updatedAt: string;
 }
 
 export const CompanySchema = SchemaFactory.createForClass(Company);

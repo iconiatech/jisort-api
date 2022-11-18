@@ -6,6 +6,9 @@ export type ProductDocument = Product & Document;
 @Schema()
 export class Product {
   @Prop({ required: true })
+  id: string;
+
+  @Prop({ required: true })
   prodNumber: string;
 
   @Prop({ required: true })
@@ -15,7 +18,13 @@ export class Product {
   compId: string;
 
   @Prop({ required: true })
+  prodPrice: number;
+
+  @Prop({ required: true })
   prodStockLeft: number;
+
+  @Prop({ required: true })
+  prodMenuNumber: number;
 
   @Prop()
   prodCategories: string[];
@@ -25,6 +34,12 @@ export class Product {
 
   @Prop({ required: true })
   inactiveMessage: string;
+
+  @Prop()
+  createdAt: string;
+
+  @Prop()
+  updatedAt: string;
 }
 
 export const ProductSchema = SchemaFactory.createForClass(Product);

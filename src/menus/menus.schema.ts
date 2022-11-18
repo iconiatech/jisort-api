@@ -6,6 +6,9 @@ export type MenuDocument = Menu & Document;
 @Schema()
 export class Menu {
   @Prop({ required: true })
+  id: string;
+
+  @Prop({ required: true })
   compId: string;
 
   @Prop({ required: true })
@@ -14,6 +17,12 @@ export class Menu {
   //Could be Send Ticket, MPesa Prompt etc
   @Prop({ required: true })
   menuActionType: string;
+
+  @Prop({ required: true })
+  menuIsTopMost: boolean;
+
+  @Prop({ required: false })
+  menuOrderNo: number;
 
   //Could be string, number etc
   @Prop({ required: true })
@@ -27,7 +36,7 @@ export class Menu {
   menuNumber: number;
 
   @Prop()
-  menuCategories: string[];
+  menuProductCategories: string[];
 
   @Prop()
   menuParentId: string;
@@ -40,6 +49,12 @@ export class Menu {
 
   @Prop({ required: true })
   inactiveMessage: string;
+
+  @Prop()
+  createdAt: string;
+
+  @Prop()
+  updatedAt: string;
 }
 
 export const MenuSchema = SchemaFactory.createForClass(Menu);

@@ -1,4 +1,4 @@
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { Injectable, NotFoundException } from '@nestjs/common';
 
@@ -17,6 +17,7 @@ export class UsersService {
    */
   async signupLocal(createUserDto: CreateUserDto): Promise<User> {
     const createdUser = new this.userModel(createUserDto);
+    createdUser.id = new Types.ObjectId().toString();
     return createdUser.save();
   }
 
