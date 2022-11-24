@@ -62,6 +62,25 @@ export class ProductsService {
     return product;
   }
 
+  async update(id: string, attrs: Partial<Product>): Promise<Product> {
+    const currentProduct = await this.findOne(id);
+
+    if (
+      'prodCategories' in attrs &&
+      attrs.prodCategories.length
+    ) {
+      const allCategories = [
+        ...attrs.prodCategories,
+        ...currentProduct.prodCategories,
+      ];
+      attrs.prodCategories = [...new Set(allCategories)];
+    }
+
+    Object.assign(currentProduct, attrs);
+
+    return new this.productsModel(currentProduct).save();
+  }
+
   /**
    * Return the products for a particular company
    * @param compId the id of the company

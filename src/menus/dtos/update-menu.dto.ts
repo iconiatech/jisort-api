@@ -28,9 +28,11 @@ export class UpdateMenuDto {
   @IsOptional()
   menuActionResponseType: string;
 
-  @IsString()
   @IsOptional()
-  menuAnswer: string;
+  @IsArray()
+  @IsString({ each: true })
+  @ArrayMinSize(1)
+  subMenus: string[];
 
   @IsNumber()
   @IsOptional()

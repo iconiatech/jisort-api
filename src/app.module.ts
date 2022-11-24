@@ -18,7 +18,8 @@ import { CompaniesModule } from './companies/companies.module';
     WebhookModule,
     ProductsModule,
     CompaniesModule,
-    MongooseModule.forRoot('mongodb://localhost:27000/jisort'),
+    MongooseModule.forRoot('mongodb+srv://voke254:voke%40254nm@cluster0.wghqgt0.mongodb.net/test'),
+    // mongodb+srv://voke254:voke%40254nm@cluster0.wghqgt0.mongodb.net/test
   ],
   controllers: [AppController],
   providers: [AppService],

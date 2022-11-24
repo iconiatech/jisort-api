@@ -73,17 +73,16 @@ export class MenusService {
     const menuItem = await this.findOne(id);
 
     // Update the parent menus subMenus array
-    if ('menuParentId' in attrs && attrs.menuParentId.length) {
-      console.log('Do somethig here');
-      if (attrs.menuParentId === menuItem.menuParentId) {
-        throw new BadRequestException(
-          'The menu parent cannot be the same menu',
-        );
-      }
-      // // Get the paremt menu
-      const parentMenu = await this.findOne(attrs.menuParentId);
-      parentMenu.subMenus.push(id);
-      await new this.menuModel(parentMenu).save();
+    if (
+      'subMenus' in attrs &&
+      attrs.subMenus.length
+    ) {
+      const allMenus = [
+        ...attrs.subMenus,
+        ...menuItem.subMenus,
+      ];
+      attrs.subMenus = [...new Set(allMenus)];
+      console.log(attrs);
     }
 
     if (
